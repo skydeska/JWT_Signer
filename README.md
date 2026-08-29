@@ -24,7 +24,7 @@ Python 3.10+ (uses `X | Y` type hints).
 ## Installation
 
 ```bash
-git clone https://github.com/<you>/jwt-sign.git
+git clone https://github.com/skydeska/JWT_Signer
 cd jwt-sign
 pip install -r requirements.txt
 ```
