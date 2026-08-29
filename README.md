@@ -68,8 +68,10 @@ This section explains the JWT vulnerabilities this tool is built to exploit, and
 **Concept**: The JWT spec allows an `alg` value of `none`, meaning "unsigned token". Some JWT libraries, when misconfigured or when an application doesn't explicitly restrict the accepted algorithms, will accept a token with `alg: none` and skip signature verification entirely. If that's the case, you can submit *any* payload you want, with no key at all.
 
 **Exploitation**:
+
+Create a `dummy.txt`. He can be empty
 ```bash
-python3 jwt_sign.py --key dummy --alg none --payload '{"sub":"administrator","admin":true}'
+python3 jwt_sign.py --key dummy.txt --alg none --payload '{"sub":"administrator","admin":true}'
 ```
 `--key dummy` is a placeholder — no real key material is used for `none` (PyJWT signs with an empty key by design for this algorithm). Try variants of the casing (`none`, `None`, `NONE`) and drop the signature segment entirely if the target library is picky, since some implementations check the string case-sensitively.
 
