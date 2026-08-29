@@ -238,7 +238,7 @@ python3 rsa_to_jwk.py public.pem --kid my-key --pretty -o jwks.json
 
 ## Notes
 
-- Field ordering/spacing in `--header`/`--claim` follows standard JSON parsing; if a value isn't valid JSON it's kept as a raw string (e.g. `--claim user=htb-stdnt`).
+- Field ordering/spacing in `--header`/`--claim` follows standard JSON parsing; if a value isn't valid JSON it's kept as a raw string (e.g. `--claim user=benkal`).
 - `--claim`/`--header` override values from `--payload`/`--headers` on key collision.
 - No claim validation is performed (no automatic rejection of malformed `exp`, missing `sub`, etc.) — this is intentional, to let you forge arbitrary/malformed tokens for fuzzing.
 
